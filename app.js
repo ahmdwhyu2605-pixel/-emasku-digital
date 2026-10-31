@@ -7,7 +7,7 @@ const money=n=>'Rp'+new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).for
 let signupMode=false,profile=null,product=null,captchaA=0,captchaB=0;
 function safeText(el,t){if(el)el.textContent=t??'';}
 function authMessage(t){safeText($('#authMessage'),t);}
-function showAuth(){ $('#authDialog').showModal(); }
+function showAuth(){ refreshCaptcha(); $('#captchaLabel').hidden=false; $('#authDialog').showModal(); }
 function refreshCaptcha(){captchaA=1+Math.floor(Math.random()*9);captchaB=1+Math.floor(Math.random()*9);safeText($('#captchaQuestion'),captchaA+' + '+captchaB+' = ?');$('#captchaAnswer').value='';}
 async function currentSession(){const {data:{session}}=await db.auth.getSession();return session;}
 async function loadProduct(){
@@ -40,8 +40,8 @@ async function submitAuth(e){
  const email=$('#email').value.trim(),password=$('#password').value;
  $('#submitAuth').disabled=true;authMessage('Memproses…');
  try{
+  if(Number($('#captchaAnswer').value)!==captchaA+captchaB){refreshCaptcha();authMessage('Jawaban hitungan salah. Coba lagi.');return;}
   if(signupMode){
-   if(Number($('#captchaAnswer').value)!==captchaA+captchaB){refreshCaptcha();authMessage('Jawaban hitungan salah. Coba lagi.');return;}
    const full_name=$('#fullName').value.trim();if(!full_name){authMessage('Isi nama lengkap.');return;}
    let referred_by=null;const code=$('#refInput').value.trim().toUpperCase();
    if(code){const {data:matches,error}=await db.rpc('lookup_referral_code',{p_code:code});if(error)throw error;if(!matches?.length){authMessage('Kode referral tidak ditemukan.');return;}referred_by=matches[0].referrer_id;}
@@ -67,7 +67,7 @@ async function trade(){
  finally{$('#tradeBtn').disabled=false;}
 }
 $('#loginBtn').onclick=showAuth;$('#startBtn').onclick=showAuth;$('#closeAuth').onclick=()=>$('#authDialog').close();
-$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullName').parentElement.hidden=!signupMode;$('#refInput').parentElement.hidden=!signupMode;$('#captchaLabel').hidden=!signupMode;if(signupMode)refreshCaptcha();$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
+$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullName').parentElement.hidden=!signupMode;$('#refInput').parentElement.hidden=!signupMode;$('#captchaLabel').hidden=false;refreshCaptcha();$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
 $('#authForm').addEventListener('submit',submitAuth);
 $('#copyBtn').onclick=async()=>{if(!profile?.referral_code)return;try{await navigator.clipboard.writeText(profile.referral_code);safeText($('#refInfo'),'Kode referral disalin.');}catch{safeText($('#refInfo'),'Kode referral: '+profile.referral_code);}};
 $('#tradeBtn').onclick=trade;
