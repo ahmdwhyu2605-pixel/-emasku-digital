@@ -51,8 +51,9 @@ async function submitAuth(e){
  finally{$('#submitAuth').disabled=false;}
 }
 async function trade(){
- const side=$('#tradeSide').value,grams=Number($('#tradeGrams').value);
- if(!Number.isFinite(grams)||grams<=0){safeText($('#tradeMessage'),'Masukkan jumlah gram lebih dari 0.');return;}
+ const side=$('#tradeSide').value,grams=Number(String($('#tradeGrams').value).trim().replace(',','.'));
+ if(!Number.isFinite(grams)||grams<=0){safeText($('#tradeMessage'),'Masukkan jumlah gram lebih dari 0 (contoh: 0,1).');return;}
+ if(!product||!Number.isFinite(Number(product.price_per_gram))||Number(product.price_per_gram)<=0){safeText($('#tradeMessage'),'Transaksi belum bisa dijalankan: harga emas aktif masih Rp0 atau belum tersedia.');return;}
  $('#tradeBtn').disabled=true;safeText($('#tradeMessage'),'Memproses transaksi sandbox…');
  try{
   const session=await currentSession();if(!session){showAuth();throw new Error('Masuk terlebih dahulu.');}
