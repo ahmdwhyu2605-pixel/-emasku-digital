@@ -21,15 +21,17 @@ async function loadUser(){
  const {data:{user}}=await db.auth.getUser();
  if(!user){profile=null;safeText($('#accountState'),'Kamu belum masuk.');safeText($('#grams'),'— gram');safeText($('#rupiah'),'Masuk untuk melihat saldo');safeText($('#refcode'),'—');$('#copyBtn').disabled=true;safeText($('#history'),'Masuk untuk melihat aktivitas.');return;}
  const {data:p,error}=await db.from('member_profiles').select('user_id,full_name,referral_code,created_at').eq('user_id',user.id).maybeSingle();
- profile=p;
- safeText($('#accountState'),(p?.full_name||user.email)+' · '+user.email);
+ profile=p;safeText($('#accountState'),(p?.full_name||user.email)+' · '+user.email);
  safeText($('#refcode'),p?.referral_code||'Kode belum tersedia');$('#copyBtn').disabled=!p?.referral_code;
- const {data:ledger}=await db.from('wallet_ledger').select('entry_type,amount,status,created_at,note').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20);
- const posted=(ledger||[]).filter(x=>x.status==='posted').reduce((sum,x)=>sum+((['refund_credit','commission_credit','adjustment'].includes(x.entry_type)?1:-1)*Number(x.amount)),0);
- safeText($('#rupiah'),money(posted)+' · saldo rupiah tercatat');
- safeText($('#history'),ledger?.length?ledger.map(x=>new Date(x.created_at).toLocaleString('id-ID')+' · '+x.entry_type+' · '+money(x.amount)+' · '+x.status).join('\n'):'Belum ada aktivitas.');
- // Gold balance is deliberately not inferred from a cash ledger; requires a verified custody/holdings ledger.
- safeText($('#grams'),'— gram');
+ const {data:{session}}=await db.auth.getSession();if(!session){safeText($('#history'),'Sesi habis. Masuk kembali.');return;}
+ try{
+  const response=await fetch(SUPABASE_URL+'/functions/v1/member-api',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'account'})});
+  const payload=await response.json();if(!response.ok)throw new Error(payload.error||'Gagal memuat akun');
+  safeText($('#rupiah'),money(payload.cashBalance)+' · saldo rupiah tercatat');
+  safeText($('#grams'),Number(payload.goldBalance||0).toFixed(4).replace('.',',')+' gram');
+  const rows=(payload.cashLedger||[]).slice(0,20);
+  safeText($('#history'),rows.length?rows.map(x=>new Date(x.created_at).toLocaleString('id-ID')+' · '+x.entry_type+' · '+money(x.amount)+' · '+x.status).join('\\n'):'Belum ada aktivitas.');
+ }catch(err){safeText($('#history'),'Data akun belum dapat dimuat: '+err.message);}
 }
 async function submitAuth(e){
  e.preventDefault();if(!db){authMessage('Database tidak tersedia.');return;}
