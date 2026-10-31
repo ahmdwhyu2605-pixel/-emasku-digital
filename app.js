@@ -4,10 +4,10 @@ const SUPABASE_KEY='sb_publishable_J0Pum85QiME0LR6VVtESsw_xGECMl6s';
 const db=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=s=>document.querySelector(s);
 const money=n=>'Rp'+new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(Number(n)||0);
-let signupMode=false,profile=null,product=null;
+let signupMode=false,profile=null,product=null,captchaA=0,captchaB=0;
 function safeText(el,t){if(el)el.textContent=t??'';}
 function authMessage(t){safeText($('#authMessage'),t);}
-function showAuth(){ $('#authDialog').showModal(); }
+function showAuth(){ $('#authDialog').showModal(); }\nfunction refreshCaptcha(){captchaA=1+Math.floor(Math.random()*9);captchaB=1+Math.floor(Math.random()*9);safeText($('#captchaQuestion'),captchaA+' + '+captchaB+' = ?');$('#captchaAnswer').value='';}
 async function currentSession(){const {data:{session}}=await db.auth.getSession();return session;}
 async function loadProduct(){
  if(!db)return;
@@ -44,7 +44,7 @@ async function submitAuth(e){
    let referred_by=null;const code=$('#refInput').value.trim().toUpperCase();
    if(code){const {data:matches,error}=await db.rpc('lookup_referral_code',{p_code:code});if(error)throw error;if(!matches?.length){authMessage('Kode referral tidak ditemukan.');return;}referred_by=matches[0].referrer_id;}
    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,...(referred_by?{referred_by}:{})}}});if(error)throw error;
-   authMessage(data.session?'Akun dibuat.':'Cek email untuk verifikasi, lalu masuk.');
+   authMessage(data.session?'Akun dibuat, langsung masuk.':'Akun terdaftar, tetapi verifikasi email masih diwajibkan di Supabase.');
    if(data.session){$('#authDialog').close();await loadUser();}
   }else{const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;$('#authDialog').close();await loadUser();}
  }catch(err){authMessage(err.message||'Gagal memproses akun.');}
@@ -65,7 +65,7 @@ async function trade(){
  finally{$('#tradeBtn').disabled=false;}
 }
 $('#loginBtn').onclick=showAuth;$('#startBtn').onclick=showAuth;$('#closeAuth').onclick=()=>$('#authDialog').close();
-$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullName').parentElement.hidden=!signupMode;$('#refInput').parentElement.hidden=!signupMode;$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
+$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullName').parentElement.hidden=!signupMode;$('#refInput').parentElement.hidden=!signupMode;$('#captchaLabel').hidden=!signupMode;if(signupMode)refreshCaptcha();$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
 $('#authForm').addEventListener('submit',submitAuth);
 $('#copyBtn').onclick=async()=>{if(!profile?.referral_code)return;try{await navigator.clipboard.writeText(profile.referral_code);safeText($('#refInfo'),'Kode referral disalin.');}catch{safeText($('#refInfo'),'Kode referral: '+profile.referral_code);}};
 $('#tradeBtn').onclick=trade;
