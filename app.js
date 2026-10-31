@@ -67,10 +67,10 @@ async function trade(){
  finally{$('#tradeBtn').disabled=false;}
 }
 $('#loginBtn').onclick=showAuth;$('#startBtn').onclick=showAuth;$('#closeAuth').onclick=()=>$('#authDialog').close();
-$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullName').parentElement.hidden=!signupMode;$('#refInput').parentElement.hidden=!signupMode;$('#captchaLabel').hidden=false;refreshCaptcha();$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
+$('#toggleAuth').onclick=()=>{signupMode=!signupMode;$('#authTitle').textContent=signupMode?'Buat akun EmasKu':'Masuk ke EmasKu';$('#fullNameLabel').hidden=!signupMode;$('#refInputLabel').hidden=!signupMode;$('#captchaLabel').hidden=false;refreshCaptcha();$('#toggleAuth').textContent=signupMode?'Saya sudah punya akun':'Buat akun';$('#submitAuth').textContent=signupMode?'Daftar':'Masuk';$('#password').autocomplete=signupMode?'new-password':'current-password';authMessage('');};
 $('#authForm').addEventListener('submit',submitAuth);
 $('#copyBtn').onclick=async()=>{if(!profile?.referral_code)return;try{await navigator.clipboard.writeText(profile.referral_code);safeText($('#refInfo'),'Kode referral disalin.');}catch{safeText($('#refInfo'),'Kode referral: '+profile.referral_code);}};
 $('#tradeBtn').onclick=trade;
-$('#fullName').parentElement.hidden=true;$('#refInput').parentElement.hidden=true;
+$('#fullNameLabel').hidden=true;$('#refInputLabel').hidden=true;
 if(db){db.auth.onAuthStateChange(()=>setTimeout(loadUser,0));loadProduct();loadUser();}
 else{safeText($('#goldPrice'),'Koneksi gagal');safeText($('#accountState'),'Pustaka Supabase gagal dimuat.');}
