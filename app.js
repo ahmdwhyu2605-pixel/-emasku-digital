@@ -48,7 +48,7 @@ async function submitAuth(e){
    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,...(referred_by?{referred_by}:{})}}});if(error)throw error;
    authMessage(data.session?'Akun dibuat, langsung masuk.':'Akun terdaftar, tetapi verifikasi email masih diwajibkan di Supabase.');
    if(data.session){$('#authDialog').close();await loadUser();}
-  }else{const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;$('#authDialog').close();await loadUser();}
+  }else{const result=await Promise.race([db.auth.signInWithPassword({email,password}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Koneksi login terlalu lama. Coba lagi atau periksa internet.')),15000))]);if(result.error)throw result.error;$('#authDialog').close();safeText($('#accountState'),'Login berhasil. Memuat akun…');void loadUser();}
  }catch(err){authMessage(err.message||'Gagal memproses akun.');}
  finally{$('#submitAuth').disabled=false;}
 }
