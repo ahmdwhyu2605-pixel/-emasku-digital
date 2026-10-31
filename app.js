@@ -41,12 +41,14 @@ async function submitAuth(e){
   if(signupMode){
    const full_name=$('#fullName').value.trim();if(!full_name){authMessage('Isi nama lengkap.');return;}
    let referred_by=null;const code=$('#refInput').value.trim().toUpperCase();
-   if(code){const {data:ref}=await db.from('member_profiles').select('user_id').eq('referral_code',code).maybeSingle();if(!ref){authMessage('Kode referral tidak ditemukan.');return;}referred_by=ref.user_id;}
-   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name}}});
-   if(error)throw error;
-   if(data.user && data.session){
-    const {error:pe}=await db.from('member_profiles').upsert({user_id:data.user.id,full_name,referred_by},{onConflict:'user_id'});if(pe)throw pe;
+   if(code){
+    const {data:matches,error:lookupError}=await db.rpc('lookup_referral_code',{p_code:code});
+    if(lookupError)throw lookupError;
+    if(!matches?.length){authMessage('Kode referral tidak ditemukan. Periksa kode pengundang.');return;}
+    referred_by=matches[0].referrer_id;
    }
+   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,...(referred_by?{referred_by}:{})}}});
+   if(error)throw error;
    authMessage(data.session?'Akun dibuat.':'Cek email untuk verifikasi, lalu masuk.');
    if(data.session){$('#authDialog').close();await loadUser();}
   }else{
