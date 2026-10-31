@@ -7,7 +7,8 @@ const money=n=>'Rp'+new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).for
 let signupMode=false,profile=null,product=null,captchaA=0,captchaB=0;
 function safeText(el,t){if(el)el.textContent=t??'';}
 function authMessage(t){safeText($('#authMessage'),t);}
-function showAuth(){ $('#authDialog').showModal(); }\nfunction refreshCaptcha(){captchaA=1+Math.floor(Math.random()*9);captchaB=1+Math.floor(Math.random()*9);safeText($('#captchaQuestion'),captchaA+' + '+captchaB+' = ?');$('#captchaAnswer').value='';}
+function showAuth(){ $('#authDialog').showModal(); }
+function refreshCaptcha(){captchaA=1+Math.floor(Math.random()*9);captchaB=1+Math.floor(Math.random()*9);safeText($('#captchaQuestion'),captchaA+' + '+captchaB+' = ?');$('#captchaAnswer').value='';}
 async function currentSession(){const {data:{session}}=await db.auth.getSession();return session;}
 async function loadProduct(){
  if(!db)return;
@@ -40,6 +41,7 @@ async function submitAuth(e){
  $('#submitAuth').disabled=true;authMessage('Memproses…');
  try{
   if(signupMode){
+   if(Number($('#captchaAnswer').value)!==captchaA+captchaB){refreshCaptcha();authMessage('Jawaban hitungan salah. Coba lagi.');return;}
    const full_name=$('#fullName').value.trim();if(!full_name){authMessage('Isi nama lengkap.');return;}
    let referred_by=null;const code=$('#refInput').value.trim().toUpperCase();
    if(code){const {data:matches,error}=await db.rpc('lookup_referral_code',{p_code:code});if(error)throw error;if(!matches?.length){authMessage('Kode referral tidak ditemukan.');return;}referred_by=matches[0].referrer_id;}
