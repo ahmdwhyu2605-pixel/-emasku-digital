@@ -36,21 +36,29 @@ async function loadUser(){
  }catch(err){safeText($('#history'),'Gagal memuat aktivitas: '+err.message);}
 }
 async function submitAuth(e){
- e.preventDefault();if(!db){authMessage('Database tidak tersedia.');return;}
+ e.preventDefault();
+ if(!db){authMessage('Database tidak tersedia.');return;}
  const email=$('#email').value.trim(),password=$('#password').value;
- $('#submitAuth').disabled=true;authMessage('Memproses…');
+ const btn=$('#submitAuth');btn.disabled=true;btn.textContent='Tunggu…';
+ authMessage('Memeriksa akun…');
+ const timeout=(ms)=>new Promise((_,reject)=>setTimeout(()=>reject(new Error('Supabase tidak merespons. Periksa internet atau konfigurasi Auth.')),ms));
  try{
-  if(Number($('#captchaAnswer').value)!==captchaA+captchaB){refreshCaptcha();authMessage('Jawaban hitungan salah. Coba lagi.');return;}
+  if(Number($('#captchaAnswer').value)!==captchaA+captchaB){refreshCaptcha();throw new Error('Jawaban hitungan salah.');}
+  let result;
   if(signupMode){
-   const full_name=$('#fullName').value.trim();if(!full_name){authMessage('Isi nama lengkap.');return;}
+   const full_name=$('#fullName').value.trim();if(!full_name)throw new Error('Isi nama lengkap.');
    let referred_by=null;const code=$('#refInput').value.trim().toUpperCase();
-   if(code){const {data:matches,error}=await db.rpc('lookup_referral_code',{p_code:code});if(error)throw error;if(!matches?.length){authMessage('Kode referral tidak ditemukan.');return;}referred_by=matches[0].referrer_id;}
-   const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,...(referred_by?{referred_by}:{})}}});if(error)throw error;
-   authMessage(data.session?'Akun dibuat, langsung masuk.':'Akun terdaftar, tetapi verifikasi email masih diwajibkan di Supabase.');
-   if(data.session){$('#authDialog').close();await loadUser();}
-  }else{const result=await Promise.race([db.auth.signInWithPassword({email,password}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Koneksi login terlalu lama. Coba lagi atau periksa internet.')),15000))]);if(result.error)throw result.error;$('#authDialog').close();safeText($('#accountState'),'Login berhasil. Memuat akun…');void loadUser();}
- }catch(err){authMessage(err.message||'Gagal memproses akun.');}
- finally{$('#submitAuth').disabled=false;}
+   if(code){const lookup=await Promise.race([db.rpc('lookup_referral_code',{p_code:code}),timeout(10000)]);if(lookup.error)throw lookup.error;if(!lookup.data?.length)throw new Error('Kode referral tidak ditemukan.');referred_by=lookup.data[0].referrer_id;}
+   result=await Promise.race([db.auth.signUp({email,password,options:{data:{full_name,...(referred_by?{referred_by}:{})}}}),timeout(12000)]);
+   if(result.error)throw result.error;
+   if(!result.data.session)throw new Error('Akun dibuat. Verifikasi email masih diwajibkan.');
+  }else{
+   result=await Promise.race([db.auth.signInWithPassword({email,password}),timeout(12000)]);
+   if(result.error)throw result.error;
+  }
+  $('#authDialog').close();safeText($('#accountState'),'Login berhasil.');void loadUser();
+ }catch(err){authMessage(err?.message||'Login gagal.');}
+ finally{btn.disabled=false;btn.textContent=signupMode?'Daftar':'Masuk';}
 }
 async function trade(){
  const side=$('#tradeSide').value,grams=Number(String($('#tradeGrams').value).trim().replace(',','.'));
